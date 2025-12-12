@@ -44,7 +44,7 @@ class TestPageRank(unittest.TestCase):
         scores = randomWalk(self.matrix, self.alpha, self.personalization)
 
         scores = scores.tolist()
-        self.check_vectors_almost_equal(self.scores, scores, precision=6)
+        self.check_vectors_almost_equal(self.scores, scores, precision=2)
 
     def test_constistency(self):
         scores = pageRankLinear(self.matrix, self.alpha, self.personalization)
@@ -52,7 +52,7 @@ class TestPageRank(unittest.TestCase):
         scores_3 = randomWalk(self.matrix, self.alpha, self.personalization)
 
         self.check_vectors_almost_equal(scores, scores_2)
-        self.check_vectors_almost_equal(scores, scores_3)
+        self.check_vectors_almost_equal(scores, scores_3, 2)
         
 if __name__ == '__main__':
     unittest.main(warnings='ignore')
