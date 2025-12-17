@@ -1,4 +1,4 @@
-from page_rank import get_transition_matrix, pageRankLinear, randomWalker
+from page_rank import *
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -37,11 +37,25 @@ def randomWalkSimulation(A, alpha, v, steps_num=10_000):
     return scores
 
 if __name__ == '__main__':
-    A = np.matrix([[.0, .5, .0, .6],
-                        [.5, .0, .2, .0],
-                        [.0, .8, .0, .0],
-                        [.0, .7, .0, .0]])
-    alpha = .9
-    v = np.array([1., 0., 0., 0.])
-
-    randomWalkSimulation(A, alpha, v)
+    #Matrice d'adjacence donnée (on ordonne les liens dans l'ordre alphabétique):
+    A = np.array([[0,5,0,0,0,0,0,3,0,0],
+                  [3,0,1,0,0,0,0,0,2,0],
+                  [0,0,0,2,0,0,0,0,5,3],
+                  [0,0,3,0,0,0,0,0,0,3],
+                  [0,0,0,5,0,4,0,0,0,0],
+                  [0,0,0,0,2,0,5,0,0,0],
+                  [0,0,0,0,0,2,0,0,3,0],
+                  [0,0,0,0,0,0,2,0,0,0],
+                  [1,4,0,0,0,0,0,4,0,4],
+                  [0,0,0,0,4,1,0,0,2,0]])
+    
+    #Construire le vecteur de personnalisation
+    with  open("VecteurPersonnalisation_Groupe2.csv") as file:
+        file.readline()
+        valeurs = file.readline()
+    valeurs = valeurs.strip().split(',')
+    valeurs = [float(val) for val in valeurs]
+    v = np.array(valeurs)
+    
+   
+    

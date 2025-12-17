@@ -1,29 +1,23 @@
 import numpy as np
+def get_transition_matrix(A):
+    n = A.shape[0]
+    P = np.zeros(A.shape, dtype=float)
 
-def get_transition_matrix(W):
-    """Returns transition matrix (P) based on graph weighted, adjacency matrix
+    for i in range(n):
+        w_i = A[i].sum()
 
-    `P[i][j]` - the probability to move from node `i` to node `j`
-
-    Args:
-        W (`np.matrix`):
-            an adjacency matrix of a directed, weighted, regular graph G
-    Returns:
-        P (`np.array`):
-            transition matrix of `W`
-    """
-    P = np.zeros(W.shape)
-    for i in range(W.shape[0]):
-        w_i = W[i].sum()
-
-        if w_i == 0: # dangling node
-            P[i, i] = 1.
+        if w_i == 0:  # dangling node
+            for j in range(n):
+                P[i, j] = 1 / n
         else:
-            for j in range(W.shape[1]):
-                w_ij = W[i, j]
-                P[i, j] = w_ij / w_i
+            for j in range(n):
+                P[i, j] = A[i, j] / w_i
 
     return P
+def get_google_matrix(P, alpha, v):
+    n = P.shape[0]
+    return alpha * P + (1 - alpha) * np.outer(np.ones(n), v)
+
 
 def pageRankLinear(A, alpha, v):
     """Returns the PageRank scores by solving the linear system equation
@@ -64,20 +58,44 @@ def pageRankLinear(A, alpha, v):
     scores = np.linalg.solve(coeff_matrix, b_vector)
     return scores
 
-def pageRankPower(A, alpha, v):
+def pageRankPower(A: np.array, alpha: float, v: np.array):
     """
     Args:
-        A (`np.matrix`):
-            an adjacency matrix of a directed, weighted, regular graph G
-        alpha (`float`):
-            a teleportation parameter between [0,1]
-        v (`np.array`):
-            a personalization vector
+        A (np.array):
+            adjacency matrix
+        alpha (float):
+            teleportation parameter in [0,1]
+        v (np.array):
+            personalization vector (sum = 1)
     Returns:
-        page_rank_scores (`np.array`): scores of personalized PageRank algorithm via power method
+        np.array: PageRank scores
     """
 
-    return pageRankLinear(A, alpha, v)
+    n = A.shape[0]
+    P = get_transition_matrix(A)
+    G = get_google_matrix(P, alpha, v)
+
+    # initial vector
+    x = np.full(n, 1 / n)
+
+    epsilon = 1e-8
+    max_iter = 1000
+
+    for _ in range(max_iter):
+        x_new = G.T @ x
+        # norme L1 (classique pour PageRank)
+        diff = np.linalg.norm(x_new - x, 1)
+        if diff < epsilon:
+            break
+        x = x_new
+
+    return x
+
+        
+
+
+
+   
 
 def randomWalker(A, alpha, v):
     """Returns generator, that at every step returns current PageRank scores
