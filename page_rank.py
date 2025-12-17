@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 def get_transition_matrix(A):
     n = A.shape[0]
     P = np.zeros(A.shape, dtype=float)
@@ -19,7 +20,7 @@ def get_google_matrix(P, alpha, v):
     return alpha * P + (1 - alpha) * np.outer(np.ones(n), v)
 
 
-def pageRankLinear(A, alpha, v):
+def pageRankLinear(A, alpha, v, show=True):
     """Returns the PageRank scores by solving the linear system equation
 
     By solving equation of Markov chain: `x^T A = x^T`
@@ -42,6 +43,8 @@ def pageRankLinear(A, alpha, v):
             a teleportation parameter between [0,1]
         v (`np.array`):
             a personalization vector
+        show (`bool`):
+            by default is True, which enables the printing of values
     Returns:
         page_rank_scores (`np.array`): scores of personalized PageRank algorithm
                                        it's an exact solution, and not approximation
@@ -56,6 +59,8 @@ def pageRankLinear(A, alpha, v):
 
     # because of very deep math explanation, such equation has always solution
     scores = np.linalg.solve(coeff_matrix, b_vector)
+    if show:
+        print("Vecteur de scores PageRank final :\n", scores)
     return scores
 
 def pageRankPower(A: np.array, alpha: float, v: np.array):
@@ -70,10 +75,17 @@ def pageRankPower(A: np.array, alpha: float, v: np.array):
     Returns:
         np.array: PageRank scores
     """
-
+ 
     n = A.shape[0]
     P = get_transition_matrix(A)
     G = get_google_matrix(P, alpha, v)
+    print("===========================")
+    print("Matrice d'adjacence : \n", A )
+    print("===========================")
+    print("Matrice de probabilité de transition : \n", P)
+    print("===========================")
+    print("Matrice Google : \n", G)
+    print("===========================")
 
     # initial vector
     x = np.full(n, 1 / n)
@@ -81,7 +93,9 @@ def pageRankPower(A: np.array, alpha: float, v: np.array):
     epsilon = 1e-8
     max_iter = 1000
 
-    for _ in range(max_iter):
+    for i in range(max_iter):
+        if i < 4 :
+            print("Vecteur x à l'itération", i, ':\n', x)
         x_new = G.T @ x
         # norme L1 (classique pour PageRank)
         diff = np.linalg.norm(x_new - x, 1)
@@ -89,6 +103,7 @@ def pageRankPower(A: np.array, alpha: float, v: np.array):
             break
         x = x_new
 
+    print("Vecteur de scores PageRank final :\n", x)
     return x
 
         
@@ -132,7 +147,51 @@ def randomWalker(A, alpha, v):
 
         yield scores / step # returns scores such as their sum = 1
 
-def randomWalk(A, alpha, v):
+def randomWalkSimulation(A, alpha, v, steps_num=10_000, walkers=50):
+    """Return PageRank scores and outputting the graph of mean error evolution
+    Args:
+        A (`np.matrix`):
+            an adjacency matrix of a directed, weighted, regular graph G
+        alpha (`float`):
+            a teleportation parameter between [0,1]
+        v (`np.array`):
+            a personalization vector
+        steps_num (`int`):
+            number of steps of random walker
+        walkers (`Generator`):
+            number of instances of random walkers
+    Returns:
+        page_rank_scores (`np.array`): 
+            scores of personalized PageRank algorithm via random walk
+    """
+    errors = []
+
+    P = get_transition_matrix(A)
+    exactPageRank = pageRankLinear(A, alpha, v, show=False)
+
+    n = A.shape[0]
+    avg_scores = np.zeros(n)
+
+    walkers_gen = [randomWalker(A, alpha, v) for _ in range(walkers)]
+
+    for step in range(steps_num):
+        for w in walkers_gen:
+            avg_scores += next(w)
+
+        avg_scores /= walkers
+
+        mean_error = np.linalg.norm(avg_scores - exactPageRank, 1) / n
+        errors.append(mean_error)
+
+    plt.semilogy(errors)
+    plt.xlabel("Steps")
+    plt.ylabel("Mean error (log scale)")
+    plt.title("Random Walk PageRank convergence")
+    plt.show()
+
+    return avg_scores
+
+def randomWalk(A, alpha, v, steps_num=10000):
     """Returns approximative PageRank scores by simulating random walker for 10_000 steps
 
     Args:
@@ -146,10 +205,9 @@ def randomWalk(A, alpha, v):
         page_rank_scores (`np.array`): 
             final scores of personalized PageRank algorithm via random walk of 10_000 steps
     """
-    steps_num = 1000_000
     random_walker = randomWalker(A, alpha, v)
 
     for _ in range(steps_num):
         scores = next(random_walker)
-
+    print("Vecteur de scores approximés PageRank final", randomWalkSimulation(A, alpha, v, steps_num))
     return scores
