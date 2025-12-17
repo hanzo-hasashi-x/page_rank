@@ -4,37 +4,33 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def randomWalkSimulation(A, alpha, v, steps_num=10_000):
-    """Return PageRank scores and outputting the graph of mean error evolution
-
-    Args:
-        A (`np.matrix`):
-            an adjacency matrix of a directed, weighted, regular graph G
-        alpha (`float`):
-            a teleportation parameter between [0,1]
-        v (`np.array`):
-            a personalization vector
-    Returns:
-        page_rank_scores (`np.array`): 
-            scores of personalized PageRank algorithm via random walk
-    """
+def randomWalkSimulation(A, alpha, v, steps_num=10_000, walkers=50):
     errors = []
 
     P = get_transition_matrix(A)
     exactPageRank = pageRankLinear(A, alpha, v)
 
-    random_walker = randomWalker(A, alpha, v)
+    n = A.shape[0]
+    avg_scores = np.zeros(n)
 
-    for _ in range(steps_num):
-        scores = next(random_walker)
+    walkers_gen = [randomWalker(A, alpha, v) for _ in range(walkers)]
 
-        mean_error = 1 / len(P) * np.abs(scores - exactPageRank).sum()
+    for step in range(steps_num):
+        for w in walkers_gen:
+            avg_scores += next(w)
+
+        avg_scores /= walkers
+
+        mean_error = np.linalg.norm(avg_scores - exactPageRank, 1) / n
         errors.append(mean_error)
 
-    plt.semilogy(errors) # log scaled graph
+    plt.semilogy(errors)
+    plt.xlabel("Steps")
+    plt.ylabel("Mean error (log scale)")
+    plt.title("Random Walk PageRank convergence")
     plt.show()
 
-    return scores
+    return avg_scores
 
 if __name__ == '__main__':
     #Matrice d'adjacence donnée (on ordonne les liens dans l'ordre alphabétique):
@@ -56,6 +52,9 @@ if __name__ == '__main__':
     valeurs = valeurs.strip().split(',')
     valeurs = [float(val) for val in valeurs]
     v = np.array(valeurs)
-    
+
+    print(pageRankLinear(A,0.7,v))
+    print(pageRankPower(A, 0.7, v))
+    print(randomWalkSimulation(A, 0.7, v))
    
     
