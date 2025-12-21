@@ -6,8 +6,6 @@ def get_transition_matrix(A):
     """Returns transition matrix (P) based on graph weighted, adjacency matrix
     `P[i][j]` - the probability to move from node `i` to node `j`
 
-    Handles dangling node by redistributing uniformly.
-
     Args:
         W (`np.matrix`):
             an adjacency matrix of a directed, weighted, regular graph G
@@ -21,10 +19,7 @@ def get_transition_matrix(A):
     for i in range(n):
         w_i = A[i].sum()
 
-        if w_i == 0:  # dangling node
-            for j in range(n):
-                P[i, j] = 1 / n
-        else:
+        if w_i != 0:
             for j in range(n):
                 P[i, j] = A[i, j] / w_i
 
