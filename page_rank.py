@@ -2,16 +2,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def get_transition_matrix(A):
-    """Returns transition matrix (P) based on graph weighted, adjacency matrix
-    `P[i][j]` - the probability to move from node `i` to node `j`
+def get_transition_matrix(A : np.array) -> np.array:
+    """
+    Retourne la matrice de probabilité de transition P d'après la matrice d'adjacence A, avec
+    `P[i][j]` - La probabilité de se déplacer du noeud `i` vers le noeud `j` <=> w_ij/w_i. 
 
     Args:
-        W (`np.matrix`):
-            an adjacency matrix of a directed, weighted, regular graph G
+        A (`np.matrix`):
+            une matrice d'adjacence d'un graphe dirigé, pondéré et simple
     Returns:
         P (`np.array`):
-            transition matrix of `W`
+            la matrice de probabilité de transition associée au graphe décrit par A.
     """
     n = A.shape[0]
     P = np.zeros(A.shape, dtype=float)
@@ -19,91 +20,107 @@ def get_transition_matrix(A):
     for i in range(n):
         w_i = A[i].sum()
 
-        if w_i != 0:
+        if w_i == 0:  # dangling node 
+            #(noeud pendant; dans ce cas on attribue une probabilité uniforme de se téléporter ailleurs)
+            for j in range(n):
+                P[i, j] = 1 / n
+        else:
             for j in range(n):
                 P[i, j] = A[i, j] / w_i
 
     return P
 
-def get_google_matrix(P, alpha, v):
-    """Returns Google matrix (G) based on transition matrix, alpha and personalization vector
-    `G[i][j]` - the probability to move from node `i` to node `j`, 
-                with taking in account the personalization vector `v`
+def get_google_matrix(P : np.array, alpha : float , v : np.array) -> np.array:
+    """
+    Retourne la matrice Google, alpha, et vecteur de personnalisation, avec
+    `G[i][j]` - La probabilité de se déplacer d'un noeud `i` vers un noeud `j`,
+                en prenant en compte la personnalisation 
 
     Args:
         P (`np.matrix`):
-            an transition matrix of a directed, weighted, regular graph G
+            une matrice de probabilité de transition d'un graphe simple, dirigé et pondéré
         alpha (`float`):
-            a teleportation parameter between [0,1], to teleport based on personalization vector
+            le paramètre de téléportaion entre [0,1]
         v (`np.array`):
-            a personalization vector, must be a probability vector
+            le vecteur de personnalisation
     Returns:
         G (`np.array`):
-            transition matrix of `W`
+            La matrice Google correspondante
     """
+
     n = P.shape[0]
     return alpha * P + (1 - alpha) * np.outer(np.ones(n), v)
 
-
-def pageRankLinear(A, alpha, v, show=True):
-    """Returns the PageRank scores by solving the linear system equation
-
-    By solving equation of Markov chain: `x^T A = x^T`
-    Transition matrix on vector must remain the same.
-    That means that transition matrix became constant, stabilized-converged
-
-    By placing Google matrix in this equation, and developing it
-    `G = aP + (1-a)ev^T`
-
-    <=> x^T (aP+(1-a)ev^T) = x^T
-    <=> ax^TP + (1-a)x^Tev^T = x^T
-    <=> x^T - ax^TP = (1-a)v^T # because x^T * e = 1
-    <=> x^T(I - aP) = (1-a)v^T # because x^T * I = x^T | shapes: (1,n) x (n,n) = (1,n)
-    <=> (I - aP)^Tx = (1-a)v # just get transpose on both sides
-
+def pageRankLinear(A : np.array, alpha : float, v : np.array, show=True ) -> np.array:
+    """Retourne les scores PageRank en résolvant le système linéaire.
+    
+    Pour alpha < 1, résout `(I - alpha*P)^T * x = (1 - alpha) * v`.
+    Pour alpha = 1, résout le système `(I - P)^T * x = 0` sous la contrainte `e^Tx = 1`.
     Args:
         A (`np.matrix`):
-            an adjacency matrix of a directed, weighted, regular graph G
+            une matrice d'adjacence d'un graphe simple, dirigé et pondéré
         alpha (`float`):
-            a teleportation parameter between [0,1], to teleport based on personalization vector
+            le paramètre de téléportation entre [0,1]
         v (`np.array`):
-            a personalization vector, must be a probability vector
+            le vecteur de personnalisation
         show (`bool`):
-            by default is True, which enables the printing of values
+           par défaut est `True`, affiche ou non les scores.
+
     Returns:
-        page_rank_scores (`np.array`): scores of personalized PageRank algorithm
-                                       it's an exact solution, and not approximation
+        scores (`np.array`):
+            les scores PageRank personnalisés exacts.
+          
+
     """
+    P = get_transition_matrix(A) 
+    n = A.shape[0]
+    I = np.eye(n)
 
-    # get transform matrix
-    P = get_transition_matrix(A)
-    I = np.eye(A.shape[0])
+    if alpha != 1:
+        # Système standard : (I - alpha*P)^T * x = (1 - alpha) * v
+        coeff_matrix = (I - alpha * P).T 
+        b_vector = (1 - alpha) * v
+        
+        scores = np.linalg.solve(coeff_matrix, b_vector)
+        
+    else:
+        # Cas alpha = 1 : Système (I - P)^T * x = 0 et sum(x) = 1
+        coeff_matrix = (I - P).T
+        
+        # On ajoute la ligne de contrainte [1, 1, ..., 1] à la position 0
+        e = np.ones(n)
+        A_system = np.insert(coeff_matrix, 0, e, axis=0) #
+        
+        #Le vecteur cible, càd [1, 0, 0, ...]
+        b_system = np.zeros(n + 1)
+        b_system[0] = 1
+        
+        #Vu qu'on a une matrice rectangle, on utilise cette fonction qui renvoie un tuple compliqué (x, residuals, rank, s).
+        scores, _, _, _ = np.linalg.lstsq(A_system, b_system, rcond=None)
 
-    coeff_matrix = (I - alpha * P).T
-    b_vector = (1 - alpha) * v
-
-    # because of very deep math explanation, such equation has always solution
-    scores = np.linalg.solve(coeff_matrix, b_vector)
     if show:
-        print("Vecteur de scores PageRank final :\n", scores)
+        print("===========================")
+        print("[SYSTEME LINEAIRE] Vecteur de scores PageRank final :\n", scores)
     return scores
 
-def pageRankPower(A: np.array, alpha: float, v: np.array):
+def pageRankPower(A: np.array, alpha:float, v: np.array) -> np.array:
     """
     Args:
-        A (np.array):
-            adjacency matrix
-        alpha (float):
-            teleportation parameter in [0,1]
-        v (np.array):
-            personalization vector (sum = 1)
+        A (`np.matrix`):
+            une matrice d'adjacence d'un graphe simple, dirigé et pondéré
+        alpha (`float`):
+            le paramètre de téléportation entre [0,1]
+        v (`np.array`):
+            le vecteur de personnalisation
     Returns:
-        np.array: PageRank scores
+        scores (`np.array`):
+            les scores PageRank personnalisés approximés (exacts à 1e-8).
     """
  
     n = A.shape[0]
     P = get_transition_matrix(A)
-    G = get_google_matrix(P, alpha, v)
+    G = get_google_matrix(P,alpha, v)
+    print("[POWER METHOD]")
     print("===========================")
     print("Matrice d'adjacence : \n", A )
     print("===========================")
@@ -117,34 +134,35 @@ def pageRankPower(A: np.array, alpha: float, v: np.array):
 
     epsilon = 1e-8
     max_iter = 1000
-
+    x_new = x.T
     for i in range(max_iter):
         if i < 4 :
             print("Vecteur x à l'itération", i, ':\n', x)
-        x_new = G.T @ x
+        x_new = x@G 
         # norme L1 (classique pour PageRank)
         diff = np.linalg.norm(x_new - x, 1)
         if diff < epsilon:
+            it = i
             break
         x = x_new
-
-    print("Vecteur de scores PageRank final :\n", x)
+    print('\n')
+    print("[POWER METHOD] Vecteur de scores PageRank final (obtenu après", it," itérations) :\n", x)
     return x
    
-def randomWalker(A, alpha, v):
-    """Returns generator, that at every step returns current PageRank scores
+def randomWalker(A:np.array, alpha:float, v:np.array):
 
+    """Retourne un generator, qui à chaque étape retourne les scores PageRank actuels
     Args:
         A (`np.matrix`):
-            an adjacency matrix of a directed, weighted, regular graph G
+            une matrice d'adjacence d'un graphe simple, dirigé et pondéré
         alpha (`float`):
-            a teleportation parameter between [0,1], to teleport based on personalization vector
+            le paramètre de téléportation entre [0,1]
         v (`np.array`):
-            a personalization vector, must be a probability vector
+            le vecteur de personnalisation
     Yields:
         page_rank_scores (`np.array`): 
-            scores of personalized PageRank algorithm via random walk simulation
-    """
+            scores PageRank personnalisés via la simulation de marche aléatoire
+        """
     step = 0
     curr_node = 0
 
@@ -166,25 +184,24 @@ def randomWalker(A, alpha, v):
 
         yield scores / step # returns scores such as their sum = 1
 
-def randomWalkSimulation(A, alpha, v, steps_num=10_000):
+def randomWalk(A:np.array, alpha:float, v:np.array) -> np.array:
     """Return PageRank scores and outputting the graph of mean error evolution
     Args:
         A (`np.matrix`):
-            an adjacency matrix of a directed, weighted, regular graph G
+            une matrice d'adjacence d'un graphe simple, dirigé et pondéré
         alpha (`float`):
-            a teleportation parameter between [0,1], to teleport based on personalization vector
+            le paramètre de téléportation entre [0,1]
         v (`np.array`):
-            a personalization vector, must be a probability vector
-        steps_num (`int`):
-            number of steps of random walker
+            le vecteur de personnalisation
     Returns:
-        page_rank_scores (`np.array`): 
-            scores of personalized PageRank algorithm via random walk
+        scores (`np.array`):
+            les scores PageRank personnalisés approximés avec la simulation de marche aléatoire.
     """
+    steps_num = 100000
     P = get_transition_matrix(A)
-    exactPageRank = pageRankLinear(A, alpha, v)
+    exactPageRank = pageRankLinear(A, alpha, v, False)
 
-    random_walker = randomWalker(A, alpha, v)
+    random_walker = randomWalker(A,alpha, v )
 
     errors = []
     for _ in range(steps_num):
@@ -193,29 +210,13 @@ def randomWalkSimulation(A, alpha, v, steps_num=10_000):
         mean_error = 1 / len(P) * np.abs(scores - exactPageRank).sum()
         errors.append(mean_error)
 
+    print("===========================")
+    print("[RANDOM WALK] Vecteur de scores approximés PageRank final", scores)
+
     plt.semilogy(errors)
     plt.xlabel("Steps")
     plt.ylabel("Mean error (log scale)")
     plt.title("Random Walk PageRank convergence")
     plt.show()
-
-    return scores
-
-def randomWalk(A, alpha, v):
-    """Returns approximative PageRank scores by simulating random walker for 10_000 steps
-
-    Args:
-        A (`np.matrix`):
-            an adjacency matrix of a directed, weighted, regular graph G
-        alpha (`float`):
-            a teleportation parameter between [0,1], to teleport based on personalization vector
-        v (`np.array`):
-            a personalization vector, must be a probability vector
-    Returns:
-        page_rank_scores (`np.array`): 
-            final scores of personalized PageRank algorithm via random walk of 10_000 steps
-    """
-    scores = randomWalkSimulation(A, alpha, v, steps_num=10000)
-    print("Vecteur de scores approximés PageRank final", scores)
-
+   
     return scores

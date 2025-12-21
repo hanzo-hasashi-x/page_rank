@@ -1,7 +1,10 @@
+#Travail de Ben-simon ATCHOGLO et Ivan USAN (GROUPE 2)
+
 from page_rank import *
 
 import matplotlib.pyplot as plt
 import numpy as np
+
 
 def main():
     #Matrice d'adjacence donnée (on ordonne les liens dans l'ordre alphabétique):
@@ -24,9 +27,9 @@ def main():
 
     #======Le code commence ici======
     alpha = 0.9
-    v1 = pageRankLinear(A, alpha,v)
+    v1 = pageRankLinear(A, alpha, v)
     v2 = pageRankPower(A, alpha, v)
-    v3 = randomWalk(A,alpha, v)
+    v3 = randomWalk(A, alpha, v)
     
 
 if __name__ == '__main__':
