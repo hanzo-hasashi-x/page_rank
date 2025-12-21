@@ -3,10 +3,7 @@ from page_rank import *
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-
-if __name__ == '__main__':
-
+def main():
     #Matrice d'adjacence donnée (on ordonne les liens dans l'ordre alphabétique):
     matrix = []
     with open("MatriceAdjacence.csv") as file_matrice :
@@ -26,10 +23,11 @@ if __name__ == '__main__':
     v = np.array(valeurs)
 
     #======Le code commence ici======
-    """
-    alpha = 0.7
+    alpha = 0.9
     v1 = pageRankLinear(A, alpha,v)
     v2 = pageRankPower(A, alpha, v)
     v3 = randomWalk(A,alpha, v)
-    """
     
+
+if __name__ == '__main__':
+    main()
